@@ -1,0 +1,100 @@
+###JS对象的比较
+
+背景知识：
+
+####==运算符规则：
+
+相比较===,==运算符可能会将操作数转化后作比较
+
+归纳如下：
+
+1. 存在布尔值，即转化为数字值
+2. 一个数字一个字符串，字符串转化为数字
+3. 一个对象一个非对象，对象转化为基本值( 调用vlaueOf()方法 )，然后使用前面规则做比较
+4. 两操作数均为对象,比较是否为指向同一对象的引用
+即数字为最高级，布尔值和字符串为同一等级，对象等级最低，操作数从低级到高级转化
+
+其他规则：
+
+- null == undefined，
+- NaN和任何都不相同
+- null和undefined在与其他作比较时，不做转化
+
+
+####valueOf方法:
+
+valueOf通常和toString方法返回值相同
+
+以下讨论__toString__方法：
+
+数组 --> 字符串，与数组调用无参数join方法结果相同
+逻辑内置对象 --> 字符串，逻辑真变true，假变false
+Date内置对象 --> 字符串，使用本地时间表示
+数字内置对象 --> 字符串，参数为表示转化基数，默认为10 
+
+    (155).toString(2)  => '10011011'
+
+对象字面量或者对象构造函数生成的对象，返回 __[object Object]__
+函数对象返回函数定义(包括函数体)字符串
+
+####typeof运算符:
+基本类型返回值:
+null,undefined,number,string,boolean
+对象类型：
+object，function
+所以，typeof只能检测基本类型值，对于对象类型无法判断是哪类Object
+
+
+
+代码分析如下:
+    
+1.存在BUG,Function也继承该方法，但是未考虑function的比较，所以是狭义上的object
+2.没看懂function里面的两个if语句，之后再看
+
+        //添加方法给对象原型,所以比较变量必定为对象
+        Object.prototype.userEqual = function(obj){
+            if(this == obj){  
+                //假设obj指向this指向的对象,方法调用中判断this指向对象和参数对象是否指向同一对象
+                return true;
+               
+            }
+            //排除undefined和null两个基本类型以及其他基本类型和function类型
+            else if( typeof(obj)== 'undefined' || obj == null || typeof(obj) !='object' ){ 
+                return false;
+            }
+            //以下情况为obj为对象，但是并非引用同一对象，所以需要比较内部属性
+            var length = 0 ; var length1 = 0;
+            var ele;
+            for(ele in this){
+                length++;
+            }
+            for(ele in obj){
+                length1++;
+            }
+            //属性长度是否一致
+            if(length!= length){
+                return false;
+            }
+            //为同一构造函数生成
+            if(obj.constructor == this.constructor){
+                for( ele in this){
+                    //如果属性为对象，需要this指向的对象和obj对象同名的属性对象递归比较
+                    if(typeof(this[ele]) == 'object'){
+                        if(!this[ele].userEqual(obj[ele])){}
+                        return false;
+                    }
+                    else if(typeof(this[ele]=='function')){
+                        //两个函数等价,toString方法将函数转化为字符串进行比较
+                        if(!this[ele].toString().userEqual(obj[ele].toString() ) )
+                        {
+                            return false;
+                        }
+                        else if(this[ele]!=obj[ele]){
+                            return false;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            }
+        };
